@@ -47,19 +47,15 @@ El estado del job se deriva listando estos prefijos. No usar Firestore ni ningun
 
 ## Variables de entorno
 
+Solo lo que cambia por entorno o es secreto vive como env var. El resto (`JOB_NAME`, `JOB_REGION`, `MAX_CONCURRENT_LLM`, `DEFAULT_MODEL_TIER`, `LOCAL_BUCKET_DIR`, `MAX_CV_CHARS`) son constantes en `src/app/config.py` — modificalas ahí.
+
 | Var | Dónde se setea | Para qué |
 |---|---|---|
 | `GCS_BUCKET` | Service + Job env | Bucket donde viven los jobs |
 | `GCP_PROJECT` | Service env | Project id para construir el job path al disparar el Cloud Run Job |
-| `JOB_NAME` | Service env (default `cv-filter-batch`) | Nombre del Cloud Run Job que se dispara desde `/jobs` |
-| `JOB_REGION` | Service env (default `us-central1`) | Región del Cloud Run Job |
 | `JOB_ID` | Job env (inyectado por el Service al disparar la execution) | Identifica el job_id que el worker debe procesar |
-| `MAX_CONCURRENT_LLM` | Job env (default `20`) | Semaphore: llamadas LLM concurrentes dentro de UN execution |
-| `DEFAULT_MODEL_TIER` | Service + Job env (default `cheap`) | Tier por defecto si el request no lo pasa |
 | `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` | Service + Job env | Claves de los providers usados (necesarias para los tiers de fallback también) |
 | `LOCAL_MODE=1` | Solo dev | Stubea GCS (filesystem) y dispatch (corre el worker en proceso) |
-| `LOCAL_BUCKET_DIR` | Solo dev (default `./.local_bucket`) | Raíz del "bucket" local |
-| `MAX_CV_CHARS` | Opcional (default 30000) | Truncado del texto del CV |
 
 ## Stack y decisiones clave
 

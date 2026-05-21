@@ -27,7 +27,7 @@ class LLMUsage:
 
 
 def _resolve_model_chain(model_tier: str) -> tuple[str, list[str]]:
-    """Devuelve (primary, fallbacks) para el tier. Acepta tanto str como list[str] en MODEL_TIERS."""
+    """Devuelve (primary_model, fallbacks) para el tier. Acepta tanto str como list[str] en MODEL_TIERS."""
     if model_tier not in MODEL_TIERS:
         raise ValueError(
             f"model_tier desconocido: {model_tier}. Disponibles: {list(MODEL_TIERS)}"
@@ -47,15 +47,15 @@ def call_llm(
 ) -> tuple[T, LLMUsage]:
     """Invoca al LLM y devuelve la respuesta parseada como Pydantic + telemetría.
 
-    Si el primary del tier tira RateLimitError u otro error transitorio, LiteLLM
+    Si el primary_model del tier tira RateLimitError u otro error transitorio, LiteLLM
     salta automáticamente al siguiente modelo de la cadena (vía `fallbacks=`).
     `LLMUsage.model` refleja el modelo que efectivamente respondió.
     """
-    primary, fallbacks = _resolve_model_chain(model_tier)
+    primary_model, fallbacks = _resolve_model_chain(model_tier)
 
     t0 = time.perf_counter()
     response = litellm.completion(
-        model=primary,
+        model=primary_model,
         messages=messages,
         response_format=response_model,
         temperature=0,
@@ -69,7 +69,7 @@ def call_llm(
 
     usage = response.usage
     cost = float(getattr(response, "_hidden_params", {}).get("response_cost") or 0.0)
-    actual_model = getattr(response, "model", None) or primary
+    actual_model = getattr(response, "model", None) or primary_model
 
     telemetry = LLMUsage(
         model=actual_model,
@@ -78,10 +78,10 @@ def call_llm(
         cost_usd=cost,
         latency_s=round(latency, 3),
     )
-    if actual_model != primary:
+    if actual_model != primary_model:
         logger.warning(
-            "LLM fallback model=%s primary=%s tier=%s",
-            actual_model, primary, model_tier,
+            "LLM fallback model=%s primary_model=%s tier=%s",
+            actual_model, primary_model, model_tier,
         )
     logger.info(
         "LLM ok model=%s in=%d out=%d cost=$%.6f latency=%.2fs",

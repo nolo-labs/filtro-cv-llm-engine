@@ -21,25 +21,21 @@ def build_system_message(job_description: str) -> dict:
     via cache_control; OpenAI: automático sobre prefijos largos).
     """
     content = f"""
-Eres un experto en preselección de CV (AI CV Screener).
-Tu tarea es analizar objetivamente el Currículum Vitae (CV) contra la Descripción de Puesto (JD)
-y devolver los datos de contacto del candidato y un score de match.
+        Eres un experto en preselección de CV (AI CV Screener).
+        Tu tarea es analizar objetivamente el Currículum Vitae (CV) contra la Descripción de Puesto (JD)
+        y completar los campos solicitados en el schema de salida.
 
-<DESCRIPCIÓN DEL PUESTO (JD)>
-{job_description}
-</DESCRIPCIÓN DEL PUESTO (JD)>
+        <DESCRIPCIÓN DEL PUESTO (JD)>
+            {job_description}
+        </DESCRIPCIÓN DEL PUESTO (JD)>
 
-<INSTRUCCIONES>
-1- Lee cuidadosamente la Descripción del Puesto (JD).
-2- Extrae los datos de contacto del candidato.
-3- Asigna un score_llm de 0 a 100 que refleje qué tan bien el perfil del candidato matchea con la JD.
-   - 0-20: no cumple los requisitos básicos.
-   - 21-50: cumple algunos requisitos pero le faltan aspectos clave.
-   - 51-75: buen match general, con algunas brechas menores.
-   - 76-100: excelente match, cumple la mayoría o todos los requisitos.
-4- Devuelve únicamente el JSON solicitado, sin explicaciones adicionales ni texto fuera del formato.
-</INSTRUCCIONES>
-""".strip()
+        <INSTRUCCIONES>
+        1- Lee cuidadosamente la Descripción del Puesto (JD).
+        2- Analizá el CV y completá cada campo del schema de salida siguiendo estrictamente su `description`.
+           No agregues, omitas ni renombres campos. Respetá los rangos y tipos declarados.
+        3- Devolvé únicamente el JSON solicitado, sin explicaciones adicionales ni texto fuera del formato.
+        </INSTRUCCIONES>
+        """.strip()
 
     return {
         "role": "system",

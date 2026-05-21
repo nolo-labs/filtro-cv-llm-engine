@@ -173,8 +173,20 @@ class FlagsEvaluacion(BaseModel):
 class Outputllm(BaseModel):
     """Schema de salida para el LLM."""
     #flags_evaluacion: FlagsEvaluacion
-    score_llm: int = Field(description="Score de match entre el currículum y la job description.", ge=0, le=100)
-    datos_contacto: Contacto
+    score_llm: int = Field(
+        description=(
+            "Score de match entre el currículum y la job description (0 a 100). "
+            "0-20: no cumple los requisitos básicos. "
+            "21-50: cumple algunos requisitos pero le faltan aspectos clave. "
+            "51-75: buen match general, con algunas brechas menores. "
+            "76-100: excelente match, cumple la mayoría o todos los requisitos."
+        ),
+        ge=0,
+        le=100,
+    )
+    datos_contacto: Contacto = Field(
+        description="Datos de contacto del candidato extraídos del CV."
+    )
 
 class AnalisisCVOutput(BaseModel):
     """Schema de salida principal que combina todo."""
