@@ -103,8 +103,59 @@ def process_one_cv(job_id: str, cv_name: str) -> None:
             user_msg = build_image_user_message(storage.download_bytes(cv_uri), mime or "image/png")
 
         parsed, telemetry = call_llm([system_msg, user_msg], Outputllm, tier)
-        score = parsed.score_llm
 
+        telemetry_dump = {
+            "model": telemetry.model,
+            "model_tier": tier,
+            "provider": telemetry.provider,
+            "request_id": telemetry.request_id,
+            "finish_reason": telemetry.finish_reason,
+            "input_tokens": telemetry.input_tokens,
+            "cached_tokens": telemetry.cached_tokens,
+            "output_tokens": telemetry.output_tokens,
+            "total_tokens": telemetry.total_tokens,
+            "remaining_requests": telemetry.remaining_requests,
+            "remaining_tokens": telemetry.remaining_tokens,
+            "cost_usd": telemetry.cost_usd,
+            "latency_s": telemetry.latency_s,
+        }
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        if not parsed.es_cv:
+            storage.upload_json(
+                error_uri,
+                {
+                    "cv_name": cv_name,
+                    "error": "not_a_cv",
+                    "motivo_no_cv": parsed.motivo_no_cv,
+                    "failed_at": now_iso,
+                    **telemetry_dump,
+                },
+            )
+            logger.info(
+                "NOT_A_CV %s/%s motivo=%s cost=$%.6f",
+                job_id, cv_name, parsed.motivo_no_cv, telemetry.cost_usd,
+            )
+            return
+
+        if parsed.intento_injection:
+            storage.upload_json(
+                error_uri,
+                {
+                    "cv_name": cv_name,
+                    "error": "prompt_injection",
+                    "razon_injection": parsed.razon_injection,
+                    "failed_at": now_iso,
+                    **telemetry_dump,
+                },
+            )
+            logger.warning(
+                "INJECTION_ATTEMPT %s/%s razon=%s cost=$%.6f",
+                job_id, cv_name, parsed.razon_injection, telemetry.cost_usd,
+            )
+            return
+
+        score = parsed.score_llm
         result = AnalisisCVOutput(
             output_llm=parsed, nombre_archivo_cv=cv_name, score_final=score
         )
@@ -112,20 +163,8 @@ def process_one_cv(job_id: str, cv_name: str) -> None:
             result_uri,
             {
                 **result.model_dump(),
-                "model": telemetry.model,
-                "model_tier": tier,
-                "provider": telemetry.provider,
-                "request_id": telemetry.request_id,
-                "finish_reason": telemetry.finish_reason,
-                "input_tokens": telemetry.input_tokens,
-                "cached_tokens": telemetry.cached_tokens,
-                "output_tokens": telemetry.output_tokens,
-                "total_tokens": telemetry.total_tokens,
-                "remaining_requests": telemetry.remaining_requests,
-                "remaining_tokens": telemetry.remaining_tokens,
-                "cost_usd": telemetry.cost_usd,
-                "latency_s": telemetry.latency_s,
-                "processed_at": datetime.now(timezone.utc).isoformat(),
+                **telemetry_dump,
+                "processed_at": now_iso,
             },
         )
         logger.info("OK %s/%s score=%d cost=$%.6f", job_id, cv_name, score, telemetry.cost_usd)

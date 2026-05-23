@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from . import jobs_dispatch, storage
+from . import guardrails, jobs_dispatch, storage
 from .config import (
     DEFAULT_MODEL_TIER,
     GCS_BUCKET,
@@ -72,6 +72,13 @@ async def create_job(req: JobRequest):
         raise HTTPException(500, "GCS_BUCKET no configurado")
     if req.model_tier not in MODEL_TIERS:
         raise HTTPException(400, f"model_tier inválido: {req.model_tier}")
+
+    validation, _ = guardrails.validate_job_description(req.job_description)
+    if validation.es_injection:
+        raise HTTPException(
+            400,
+            f"JD rechazada por guardrail anti-injection: {validation.razon}",
+        )
 
     weights_dict = (req.weights or Weights()).to_dict()
     total_w = sum(weights_dict.values())
