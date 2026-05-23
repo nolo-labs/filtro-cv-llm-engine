@@ -11,8 +11,6 @@ from .config import (
     GCS_BUCKET,
     IMAGE_FORMATS,
     TEXT_FORMATS,
-    VISION_CAPABLE_TIERS,
-    VISION_FALLBACK_TIER,
 )
 from .llm import call_llm
 from .prompt import build_image_user_message, build_system_message, build_text_user_message
@@ -79,21 +77,14 @@ def process_one_cv(job_id: str, cv_name: str) -> None:
 
     job_json = storage.read_json(storage.gs_uri(GCS_BUCKET, job_prefix, "job.json"))
     job_description = job_json["job_description"]
-    requested_tier = job_json.get("model_tier", "cheap")
+    requested_tier = job_json.get("model_tier", "default")
 
     cv_uri = storage.gs_uri(GCS_BUCKET, job_prefix, "cvs", cv_name)
     error_uri = storage.gs_uri(GCS_BUCKET, job_prefix, "errors", f"{cv_name}.json")
 
     try:
         kind = _classify(cv_name)
-        if kind == "image" and requested_tier not in VISION_CAPABLE_TIERS:
-            logger.info(
-                "Tier %s no soporta imágenes — fallback a %s para %s",
-                requested_tier, VISION_FALLBACK_TIER, cv_name,
-            )
-            tier = VISION_FALLBACK_TIER
-        else:
-            tier = requested_tier
+        tier = requested_tier
 
         system_msg = build_system_message(job_description)
         if kind == "text":

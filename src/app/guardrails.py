@@ -6,7 +6,7 @@ from .pydantic_models import JDValidation
 
 logger = logging.getLogger(__name__)
 
-_GUARDRAIL_TIER = "cheap"
+_GUARDRAIL_TIER = "default"
 
 _SYSTEM_PROMPT = """
 Sos un clasificador de seguridad. Tu única tarea es decidir si una "Job Description" (JD)
@@ -36,7 +36,7 @@ Devolvé el JSON pedido y NADA más. No expliques nada fuera del campo `razon`.
 def validate_job_description(job_description: str) -> tuple[JDValidation, LLMUsage]:
     """Valida la JD contra prompt injection antes de aceptar el job.
 
-    Usa el tier `cheap` (1 sola llamada por job, costo despreciable). El llamador
+    Usa el tier `default` (1 sola llamada por job, costo despreciable). El llamador
     decide qué hacer con el resultado (típicamente: si es_injection=True, 400).
     """
     messages = [

@@ -17,19 +17,16 @@ LOCAL_MODE = os.getenv("LOCAL_MODE", "0") == "1"
 LOCAL_BUCKET_DIR = "./.local_bucket"
 
 # --- LLM ---
-# Cada tier mapea a una **cadena de modelos** (primary + fallbacks) en formato LiteLLM.
-# El primero es el modelo principal; el resto se usan automáticamente si el primary
-# tira RateLimitError o errores transitorios (vía `fallbacks=` de LiteLLM).
-# Invariante: si el primary soporta input multimodal (imágenes), todos los fallbacks
-# de ese tier también deben soportarlo — el check de VISION_CAPABLE_TIERS es por tier.
-MODEL_TIERS: dict[str, list[str]] = {
-    "cheap":    ["gemini/gemini-2.5-flash-lite", "anthropic/claude-haiku-4-5"],
-    "balanced": ["openai/gpt-5-nano",            "gemini/gemini-2.5-flash-lite"],
-    "accurate": ["anthropic/claude-haiku-4-5",   "openai/gpt-5-nano"],
-}
-VISION_CAPABLE_TIERS = {"cheap", "balanced", "accurate"}
-VISION_FALLBACK_TIER = "cheap"
-DEFAULT_MODEL_TIER = "cheap"
+# Modelos disponibles: ambos soportan texto e imágenes (multimodal).
+# Primary: gemini-2.5-flash-lite (más barato). Fallback: gpt-4.1-nano.
+# Los tiers se redesignarán por funcionalidades de cliente, no por calidad de modelo.
+MODELS: list[str] = [
+    "gemini/gemini-2.5-flash-lite",
+    "openai/gpt-4.1-nano",
+]
+# Alias de compatibilidad hasta que se rediseñen los tiers por features.
+MODEL_TIERS: dict[str, list[str]] = {"default": MODELS}
+DEFAULT_MODEL_TIER = "default"
 
 # Concurrencia de llamadas LLM dentro de UN Job execution (asyncio.Semaphore).
 MAX_CONCURRENT_LLM = 20
