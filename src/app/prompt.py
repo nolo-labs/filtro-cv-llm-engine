@@ -17,8 +17,8 @@ def build_system_message(job_description: str) -> dict:
     """System message con `cache_control` para que LiteLLM active prompt caching donde el provider lo soporte.
 
     Para una misma JD ejecutada contra N CVs, el prompt sistema se cachea y el
-    input efectivo por llamada baja drásticamente (Anthropic/Gemini: explícito
-    via cache_control; OpenAI: automático sobre prefijos largos).
+    input efectivo por llamada baja drásticamente (Gemini: explícito via cache_control;
+    OpenAI: automático sobre prefijos largos).
     """
     content = f"""
         Eres un experto en preselección de CV (AI CV Screener).

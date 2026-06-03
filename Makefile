@@ -10,10 +10,10 @@ CONCURRENCY   ?= 10
 WORKER_SA      = $(SERVICE_NAME)-worker@$(PROJECT_ID).iam.gserviceaccount.com
 IMAGE          = gcr.io/$(PROJECT_ID)/$(SERVICE_NAME):latest
 
-# Env vars de runtime para Service y Job. OPENAI/GEMINI/ANTHROPIC sólo si están seteadas en el shell.
+# Env vars de runtime para Service y Job. OPENAI/GEMINI sólo si están seteadas en el shell.
 # JOB_NAME / JOB_REGION viven como constantes en src/app/config.py — mantener sincronizado.
 RUNTIME_ENV    = GCS_BUCKET=$(BUCKET),GCP_PROJECT=$(PROJECT_ID)
-LLM_ENV        = OPENAI_API_KEY=$$OPENAI_API_KEY,GEMINI_API_KEY=$$GEMINI_API_KEY,ANTHROPIC_API_KEY=$$ANTHROPIC_API_KEY
+LLM_ENV        = OPENAI_API_KEY=$$OPENAI_API_KEY,GEMINI_API_KEY=$$GEMINI_API_KEY
 
 .PHONY: help install lock dev test build deploy deploy-service deploy-job logs logs-job clean
 

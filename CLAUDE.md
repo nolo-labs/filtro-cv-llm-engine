@@ -54,14 +54,14 @@ Solo lo que cambia por entorno o es secreto vive como env var. El resto (`JOB_NA
 | `GCS_BUCKET` | Service + Job env | Bucket donde viven los jobs |
 | `GCP_PROJECT` | Service env | Project id para construir el job path al disparar el Cloud Run Job |
 | `JOB_ID` | Job env (inyectado por el Service al disparar la execution) | Identifica el job_id que el worker debe procesar |
-| `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` | Service + Job env | Claves de los providers usados (necesarias para los tiers de fallback también) |
+| `OPENAI_API_KEY`, `GEMINI_API_KEY` | Service + Job env | Claves de los providers usados (necesarias para los tiers de fallback también) |
 | `LOCAL_MODE=1` | Solo dev | Stubea GCS (filesystem) y dispatch (corre el worker en proceso) |
 
 ## Stack y decisiones clave
 
 - **LLM via LiteLLM**, no LangChain. Provider se elige con `model_tier` → `MODEL_TIERS` en `src/app/config.py`. Cada tier es una **lista** `[primary, ...fallbacks]`. LiteLLM convierte la `Outputllm` Pydantic a JSON Schema y devuelve `cost_usd` por llamada.
 - **Fallback chain por tier.** Si el primary tira `RateLimitError` u otro error transitorio, LiteLLM salta automáticamente al siguiente modelo de la cadena (vía `fallbacks=` + `num_retries=2`). `LLMUsage.model` refleja el modelo que efectivamente respondió.
-- **Prompt caching habilitado.** El system message lleva `cache_control: ephemeral`. LiteLLM lo traduce: explícito en Anthropic, automático en OpenAI (>1024 tokens), implicit caching en Gemini. Para batches contra una misma JD, el input efectivo por llamada baja drásticamente. El cache es server-side (per API key), funciona igual con un Job de muchos CVs concurrentes.
+- **Prompt caching habilitado.** El system message lleva `cache_control: ephemeral`. LiteLLM lo traduce: explícito en Gemini, automático en OpenAI (>1024 tokens). Para batches contra una misma JD, el input efectivo por llamada baja drásticamente. El cache es server-side (per API key), funciona igual con un Job de muchos CVs concurrentes.
 - **Sin Tesseract.** Imágenes van directo al LLM multimodal (`gemini/gemini-2.5-flash-lite` por defecto). Más barato y más exacto que OCR + LLM textual, y la imagen Docker pesa ~200 MB menos.
 - **Vision fallback por tier.** Si un CV imagen llega con un tier que no soporta input multimodal (ver `VISION_CAPABLE_TIERS` en `config.py`), el worker cae automáticamente a `VISION_FALLBACK_TIER` (default `cheap`). **Invariante**: todos los modelos de un tier vision-capable deben soportar multimodal; los fallback chains se arman respetando esto.
 - **Idempotencia**. `process_one_cv` chequea `storage.exists(result_uri)` al inicio y sale si ya está procesado. Esto cubre dos escenarios: retry automático del Cloud Run Job execution si crashea, y re-disparo manual del Job para "resume from where it left off".
@@ -126,9 +126,8 @@ En `LOCAL_MODE`:
 ## Deploy
 
 ```bash
-export GEMINI_API_KEY=...         # tier por defecto ("cheap")
-# OPENAI_API_KEY o ANTHROPIC_API_KEY solo si vas a usar tiers "balanced"/"accurate"
-# (o si querés que el fallback chain pueda saltar a esos providers)
+export GEMINI_API_KEY=...         # provider primario
+export OPENAI_API_KEY=...         # opcional: para el fallback chain
 make deploy PROJECT_ID=mi-proyecto
 ```
 

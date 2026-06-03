@@ -20,7 +20,7 @@ T = TypeVar("T", bound=BaseModel)
 @dataclass
 class LLMUsage:
     model: str  # modelo que efectivamente respondió (puede ser un fallback)
-    provider: Optional[str]  # custom_llm_provider: "gemini" / "anthropic" / "openai" / ...
+    provider: Optional[str]  # custom_llm_provider: "gemini" / "openai" / ...
     request_id: Optional[str]  # id del provider, útil para soporte y debugging
     finish_reason: Optional[str]  # "stop" (normal), "length" (truncado), "content_filter", ...
     input_tokens: int
@@ -135,15 +135,14 @@ def _extract_rate_limit(headers: dict) -> tuple[Optional[int], Optional[int]]:
     """Devuelve (remaining_requests, remaining_tokens) buscando los nombres usados por cada provider.
 
     OpenAI/Azure:   x-ratelimit-remaining-{requests,tokens}
-    Anthropic:      anthropic-ratelimit-{requests,tokens}-remaining
     Gemini:         no expone rate-limit en headers HTTP (se gestiona vía quotas del proyecto)
     """
     if not headers:
         return None, None
     # Normalizar keys a lowercase para evitar problemas de case-sensitivity
     h = {k.lower(): v for k, v in headers.items()}
-    candidates_req = ("x-ratelimit-remaining-requests", "anthropic-ratelimit-requests-remaining")
-    candidates_tok = ("x-ratelimit-remaining-tokens", "anthropic-ratelimit-tokens-remaining")
+    candidates_req = ("x-ratelimit-remaining-requests",)
+    candidates_tok = ("x-ratelimit-remaining-tokens",)
     req = _first_int(h, candidates_req)
     tok = _first_int(h, candidates_tok)
     return req, tok
