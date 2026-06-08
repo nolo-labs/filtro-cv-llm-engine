@@ -26,9 +26,14 @@ wheels/
 env/
 venv/
 ENV/
+.envrc
 
 # VS Code
 .vscode/
+
+# Dev local
+.local_bucket/
+cvs/
 
 # Archivos temporales
 *.tmp

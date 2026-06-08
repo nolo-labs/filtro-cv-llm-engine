@@ -15,7 +15,7 @@ servicio interno ──POST /jobs──► Cloud Run Service ──run_job──
 ```
 
 1. El servicio upstream sube CVs a `gs://$GCS_BUCKET/jobs/{job_id}/cvs/`.
-2. Llama `POST /jobs` con `{job_id, job_description, weights?, model_tier?}`.
+2. Llama `POST /jobs` con `{job_id, job_description, model_tier?}`.
 3. El Service escribe `job.json` y dispara una execution del Cloud Run Job `cv-filter-batch` con `JOB_ID` como env override.
 4. El Job lista los CVs del bucket y los procesa en paralelo (asyncio + Semaphore). Cada CV: extrae texto/imagen → llama LiteLLM (con fallback chain por tier) → escribe `results/{cv}.json` o `errors/{cv}.json`.
 5. `GET /jobs/{id}` devuelve `{total, completed, failed, pending, cost_usd}` derivado de listar el bucket.
@@ -58,12 +58,12 @@ src/app/
 ├── main.py              endpoints FastAPI (/jobs, /jobs/{id}, /healthz)
 ├── jobs_dispatch.py     dispara Cloud Run Job execution (LOCAL_MODE: en proceso)
 ├── worker.py            entrypoint del Job: async runner sobre process_one_cv
-├── cv_processor.py      process_one_cv: orquesta un CV end-to-end + calcular_score_ponderado
+├── cv_processor.py      process_one_cv: orquesta un CV end-to-end
 ├── llm.py               call_llm: LiteLLM + fallback chain + telemetría
-├── prompt.py            builders de mensajes (texto + imagen) + obtener_info_flags
+├── prompt.py            builders de mensajes (texto + imagen)
 ├── text_extraction.py   extracción de texto (PDF, DOCX, TXT, MD)
 ├── storage.py           wrapper GCS (LOCAL_MODE → filesystem)
-├── pydantic_models.py   Outputllm / FlagsEvaluacion / Weights / Contacto
+├── pydantic_models.py   Outputllm / AnalisisCVOutput / Contacto / JDValidation
 └── config.py            env vars, MODEL_TIERS, formatos
 scripts/test_api.py      end-to-end contra la API
 Makefile                 install · dev · test · build · deploy · logs · logs-job · clean
@@ -74,7 +74,7 @@ Dockerfile               imagen Cloud Run (slim, sin Tesseract). Misma imagen pa
 
 LEER 
 
-1. pydantic_models.py — es el vocabulario del sistema. Entiende FlagsEvaluacion, Weights, Outputllm y AnalisisCVOutput y el resto se acomoda solo.
+1. pydantic_models.py — es el vocabulario del sistema. Entiende Outputllm y AnalisisCVOutput y el resto se acomoda solo.
 
 2. config.py — dos minutos, pero te da el mapa de las variables de entorno y los MODEL_TIERS que aparecen en todo el resto.
 

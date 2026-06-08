@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 
 # Drop the default JSON-schema validator y deja que Pydantic valide en client-side.
 litellm.drop_params = True
+# Temporal: loguea errores internos de LiteLLM (fallback reasons, auth failures).
+# Remover una vez identificado el problema con Gemini.
+litellm.set_verbose = True
 
 T = TypeVar("T", bound=BaseModel)
 

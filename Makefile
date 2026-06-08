@@ -27,10 +27,10 @@ lock:  ## Regenera uv.lock desde pyproject.toml
 	uv lock
 
 dev:  ## Levanta la API local en LOCAL_MODE (sin GCP)
-	LOCAL_MODE=1 GCS_BUCKET=test uvicorn src.app.main:app --reload
+	LOCAL_MODE=1 GCS_BUCKET=test uv run uvicorn src.app.main:app --reload
 
 test:  ## End-to-end: sube cvs/, llama POST /jobs, polling, descarga results
-	python scripts/test_api.py
+	uv run python scripts/test_api.py
 
 build:  ## Build & push de la imagen a GCR via Cloud Build (compartida entre service y job)
 	@test -n "$(PROJECT_ID)" || (echo "PROJECT_ID requerido"; exit 1)

@@ -1,96 +1,7 @@
-from typing import Optional, List, Literal
+from typing import Optional, List
 
 from pydantic import BaseModel, Field, EmailStr
 
-
-class Weights(BaseModel):
-    """Pesos para el cálculo del score ponderado.
-    
-    Un weight por cada campo en FlagsEvaluacion. Los valores deben sumar 1.0.
-    Todos los campos tienen valores por defecto usando Pydantic defaults.
-    """
-    experiencia_relevante_weight: float = Field(
-        default=0.65,
-        description="Peso para experiencia relevante (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    habilidades_tecnicas_weight: float = Field(
-        default=0.0,
-        description="Peso para habilidades técnicas (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    idiomas_requeridos_weight: float = Field(
-        default=0.0,
-        description="Peso para idiomas requeridos (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    referencias_weight: float = Field(
-        default=0.15,
-        description="Peso para referencias (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    disponibilidad_full_time_weight: float = Field(
-        default=0.0,
-        description="Peso para disponibilidad full time (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    disponibilidad_part_time_weight: float = Field(
-        default=0.0,
-        description="Peso para disponibilidad part time (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    alta_rotacion_laboral_weight: float = Field(
-        default=0.0,
-        description="Peso para alta rotación laboral (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    estudios_secundarios_completos_weight: float = Field(
-        default=0.0,
-        description="Peso para estudios secundarios completos (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    estudios_terciarios_completos_weight: float = Field(
-        default=0.0,
-        description="Peso para estudios terciarios completos (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    estudios_terciarios_en_curso_weight: float = Field(
-        default=0.0,
-        description="Peso para estudios terciarios en curso (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    cumple_edad_weight: float = Field(
-        default=0.10,
-        description="Peso para cumple edad (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    cumple_ubicacion_weight: float = Field(
-        default=0.10,
-        description="Peso para cumple ubicación (0.0 a 1.0)",
-        ge=0.0,
-        le=1.0
-    )
-    
-    def to_dict(self) -> dict:
-        """Convierte el modelo a diccionario, mapeando nombres con _weight a nombres sin _weight."""
-        result = {}
-        for field_name, value in self.model_dump().items():
-            # Remover _weight del nombre del campo
-            if field_name.endswith("_weight"):
-                original_name = field_name[:-7]  # Remover "_weight"
-                result[original_name] = value
-        return result
 
 
 class Contacto(BaseModel):
@@ -102,94 +13,15 @@ class Contacto(BaseModel):
     links: Optional[List[str]] = Field(default=None, description="Lista de URLs relevantes (LinkedIn, portafolio, GitHub, etc.). Null si no se encuentran.")
     edad: Optional[int] = Field(default=None, description="Edad del candidato si está disponible. Null si no se encuentra.")
     
-
-class FlagsEvaluacion(BaseModel):
-    """Flags booleanos que indican si el CV cumple con cada característica evaluada.
-    """
-
-    experiencia_relevante: Optional[int] = Field(
-        default=None, 
-        description="Puntaje de 1 a 5 que evalúa qué tan bien coinciden el tipo y cantidad de experiencia del candidato con la JD. "
-                   "Donde 1 es la coincidencia más baja y 5 es la coincidencia más alta.",
-        ge=1,
-        le=5
-    )
-
-    habilidades_tecnicas: Optional[bool] = Field(
-        default=None, 
-        description="True si el candidato posee las habilidades técnicas requeridas en la JD. "
-    )
-
-    idiomas_requeridos: Optional[bool] = Field(
-        default=None, 
-        description="True si el candidato cumple con los requisitos de idiomas especificados en la JD. "
-    )
-
-    referencias: Optional[bool] = Field(
-        default=None, 
-        description="True si entrega contactos de referencias de experiencias previas."
-                    "False en caso contrario. Null si no se menciona.")
-
-    disponibilidad_full_time: Optional[bool] = Field(
-        default=None, 
-        description="True si el candidato está disponible para trabajar a tiempo completo."
-                    "False en caso contrario. Null si no se menciona.")
-
-    disponibilidad_part_time: Optional[bool] = Field(
-        default=None,
-        description="True si el candidato está disponible para trabajar a tiempo parcial."
-                    "False en caso contrario. Null si no se menciona.")
-
-    alta_rotacion_laboral: Optional[bool] = Field(
-        default=None,
-        description="True si el candidato muestra 2 o más trabajos con duración menor a 9 meses."
-                    "False en caso contrario. Null si no se puede determinar.")
-
-    estudios_secundarios_completos: Optional[bool] = Field(
-        default=None, 
-        description="True si el candidato ha completado estudios secundarios."
-                    "False en caso contrario. Null si no se puede determinar.")
-
-    estudios_terciarios_completos: Optional[bool] = Field(
-        default=None,
-        description="True si el candidato ha completado estudios terciarios o universitarios."
-                    "False en caso contrario. Null si no se puede determinar.")
-
-    estudios_terciarios_en_curso: Optional[bool] = Field(
-        default=None,
-        description="True si el candidato está cursando estudios terciarios o universitarios."
-                    "False en caso contrario. Null si no se puede determinar.")
-
-    cumple_edad: Optional[bool] = Field(
-        default=None,
-        description="True si el candidato cumple con el requisito de edad especificado en la JD."
-                    "False en caso contrario. Null si no se puede determinar o no hay requisito de edad.")
-
-    cumple_ubicacion: Optional[bool] = Field(
-        default=None,
-        description="True si el candidato cumple con el requisito de ubicación especificado en la JD."
-                    "False en caso contrario. Null si no se puede determinar o no hay requisito de ubicación.")
-    
 class Outputllm(BaseModel):
     """Schema de salida para el LLM."""
-    #flags_evaluacion: FlagsEvaluacion
     es_cv: bool = Field(
         description=(
             "True si el archivo recibido es un CV/resume genuino (datos profesionales, "
             "experiencia laboral, educación, contacto). "
-            "False si es factura, foto random, documento personal sin datos profesionales, "
-            "texto irrelevante o archivo vacío. "
+            "False en caso contrario (factura, foto random, etc.), "
             "Cuando es False, score_llm debe ser 0 y datos_contacto debe tener todos sus campos en null."
         )
-    )
-    motivo_no_cv: Optional[Literal[
-        "factura", "documento_personal", "imagen_no_documento",
-        "texto_irrelevante", "vacio", "otro",
-    ]] = Field(
-        default=None,
-        description=(
-            "Categoría del archivo cuando es_cv=False. Null si es_cv=True."
-        ),
     )
     intento_injection: bool = Field(
         description=(
@@ -203,7 +35,7 @@ class Outputllm(BaseModel):
     razon_injection: Optional[str] = Field(
         default=None,
         description=(
-            "Cita corta del patrón/frase detectada que motivó intento_injection=True. "
+            "Explique en 1 frase si intento_injection=True. "
             "Null si intento_injection=False."
         ),
     )
@@ -218,6 +50,12 @@ class Outputllm(BaseModel):
         ),
         ge=0,
         le=100,
+    )
+    razon_score_llm: Optional[str] = Field(
+        default=None,
+        description=(
+            "Explicación corta (1 frase) que justifica el score_llm."
+        ),
     )
     datos_contacto: Contacto = Field(
         description="Datos de contacto del candidato extraídos del CV."
@@ -236,15 +74,10 @@ class JDValidation(BaseModel):
             "informal o con errores tipográficos)."
         )
     )
-    razon: str = Field(
+    razon_injection: str = Field(
         description=(
-            "Explicación corta (1 frase) que justifica la clasificación. "
-            "Si es_injection=True, citar el patrón detectado."
+            "Explicación corta (1 frase) que justifica es_injection. "
+            "Null si es_injection=False."
         )
     )
 
-class AnalisisCVOutput(BaseModel):
-    """Schema de salida principal que combina todo."""
-    output_llm: Outputllm = Field(description="Resultado del análisis del LLM.")
-    nombre_archivo_cv: str = Field(description="Nombre original del archivo del CV analizado.")
-    score_final: int = Field(description="Puntuación total calculada basada en flags y pesos (0 a 100).", ge=0, le=100)

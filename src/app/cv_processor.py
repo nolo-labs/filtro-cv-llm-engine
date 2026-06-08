@@ -4,7 +4,6 @@ import mimetypes
 import os
 import traceback
 from datetime import datetime, timezone
-from typing import Dict
 
 from . import storage
 from .config import (
@@ -14,7 +13,7 @@ from .config import (
 )
 from .llm import call_llm
 from .prompt import build_image_user_message, build_system_message, build_text_user_message
-from .pydantic_models import AnalisisCVOutput, FlagsEvaluacion, Outputllm, Weights
+from .pydantic_models import Outputllm
 from .text_extraction import cargar_contenido_texto
 
 logger = logging.getLogger(__name__)
@@ -31,32 +30,6 @@ def _classify(cv_name: str) -> str:
     if ext in IMAGE_FORMATS:
         return "image"
     raise ValueError(f"Extensión no soportada: {ext} ({cv_name})")
-
-
-def calcular_score_ponderado(
-    flags: FlagsEvaluacion, pesos: Dict[str, float] | None = None
-) -> int:
-    """Score 0-100 ponderado por `pesos`. Flags None no contribuyen."""
-    if pesos is None:
-        pesos = Weights().to_dict()
-
-    total_peso = sum(pesos.values())
-    if abs(total_peso - 1.0) > 0.01:
-        raise ValueError(f"Los pesos deben sumar 1.0, suman {total_peso}")
-
-    score = 0.0
-    for campo, peso in pesos.items():
-        if not hasattr(flags, campo):
-            continue
-        valor = getattr(flags, campo)
-        if valor is None:
-            continue
-        if campo == "experiencia_relevante":
-            score += peso * (valor / 5.0) * 100
-        elif valor:
-            score += peso * 100
-
-    return int(round(score))
 
 
 def process_one_cv(job_id: str, cv_name: str) -> None:
@@ -93,72 +66,52 @@ def process_one_cv(job_id: str, cv_name: str) -> None:
             mime, _ = mimetypes.guess_type(cv_name)
             user_msg = build_image_user_message(storage.download_bytes(cv_uri), mime or "image/png")
 
-        parsed, telemetry = call_llm([system_msg, user_msg], Outputllm, tier)
+        parsed, llm_usage = call_llm([system_msg, user_msg], Outputllm, tier)
 
-        telemetry_dump = {
-            "model": telemetry.model,
-            "model_tier": tier,
-            "provider": telemetry.provider,
-            "request_id": telemetry.request_id,
-            "finish_reason": telemetry.finish_reason,
-            "input_tokens": telemetry.input_tokens,
-            "cached_tokens": telemetry.cached_tokens,
-            "output_tokens": telemetry.output_tokens,
-            "total_tokens": telemetry.total_tokens,
-            "remaining_requests": telemetry.remaining_requests,
-            "remaining_tokens": telemetry.remaining_tokens,
-            "cost_usd": telemetry.cost_usd,
-            "latency_s": telemetry.latency_s,
-        }
         now_iso = datetime.now(timezone.utc).isoformat()
+        telemetry = {
+            "nombre_archivo_cv": cv_name,
+            "processed_at": now_iso,
+            "model": llm_usage.model,
+            "model_tier": tier,
+            "provider": llm_usage.provider,
+            "request_id": llm_usage.request_id,
+            "finish_reason": llm_usage.finish_reason,
+            "input_tokens": llm_usage.input_tokens,
+            "cached_tokens": llm_usage.cached_tokens,
+            "output_tokens": llm_usage.output_tokens,
+            "total_tokens": llm_usage.total_tokens,
+            "remaining_requests": llm_usage.remaining_requests,
+            "remaining_tokens": llm_usage.remaining_tokens,
+            "cost_usd": llm_usage.cost_usd,
+            "latency_s": llm_usage.latency_s,
+        }
 
         if not parsed.es_cv:
-            storage.upload_json(
-                error_uri,
-                {
-                    "cv_name": cv_name,
-                    "error": "not_a_cv",
-                    "motivo_no_cv": parsed.motivo_no_cv,
-                    "failed_at": now_iso,
-                    **telemetry_dump,
-                },
-            )
-            logger.info(
-                "NOT_A_CV %s/%s motivo=%s cost=$%.6f",
-                job_id, cv_name, parsed.motivo_no_cv, telemetry.cost_usd,
-            )
+            storage.upload_json(error_uri, {"error": "not_a_cv", "telemetry": telemetry})
+            logger.info("NOT_A_CV %s/%s cost=$%.6f", job_id, cv_name, llm_usage.cost_usd)
             return
 
         if parsed.intento_injection:
-            storage.upload_json(
-                error_uri,
-                {
-                    "cv_name": cv_name,
-                    "error": "prompt_injection",
-                    "razon_injection": parsed.razon_injection,
-                    "failed_at": now_iso,
-                    **telemetry_dump,
-                },
-            )
+            storage.upload_json(error_uri, {
+                "error": "prompt_injection",
+                "razon_injection": parsed.razon_injection,
+                "telemetry": telemetry,
+            })
             logger.warning(
                 "INJECTION_ATTEMPT %s/%s razon=%s cost=$%.6f",
-                job_id, cv_name, parsed.razon_injection, telemetry.cost_usd,
+                job_id, cv_name, parsed.razon_injection, llm_usage.cost_usd,
             )
             return
 
-        score = parsed.score_llm
-        result = AnalisisCVOutput(
-            output_llm=parsed, nombre_archivo_cv=cv_name, score_final=score
+        storage.upload_json(result_uri, {
+            "output_llm": parsed.model_dump(),
+            "telemetry": telemetry,
+        })
+        logger.info(
+            "OK %s/%s score=%d cost=$%.6f",
+            job_id, cv_name, parsed.score_llm, llm_usage.cost_usd,
         )
-        storage.upload_json(
-            result_uri,
-            {
-                **result.model_dump(),
-                **telemetry_dump,
-                "processed_at": now_iso,
-            },
-        )
-        logger.info("OK %s/%s score=%d cost=$%.6f", job_id, cv_name, score, telemetry.cost_usd)
 
     except Exception as e:
         logger.exception("FAIL %s/%s", job_id, cv_name)

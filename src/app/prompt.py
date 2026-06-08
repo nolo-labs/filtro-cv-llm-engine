@@ -1,16 +1,7 @@
 """Construcción de mensajes para el LLM (formato OpenAI-compat que LiteLLM normaliza)."""
 import base64
-from typing import Dict, List
 
 from .config import MAX_CV_CHARS
-from .pydantic_models import FlagsEvaluacion
-
-
-def obtener_info_flags() -> List[Dict[str, str]]:
-    return [
-        {"nombre": name, "descripcion": info.description}
-        for name, info in FlagsEvaluacion.model_fields.items()
-    ]
 
 
 def build_system_message(job_description: str) -> dict:
@@ -41,10 +32,9 @@ def build_system_message(job_description: str) -> dict:
         Si el archivo recibido NO es un CV/resume (factura, foto random, documento personal sin
         datos profesionales, texto irrelevante, archivo vacío), devolvé:
         - es_cv = false
-        - motivo_no_cv = categoría apropiada del enum
         - score_llm = 0
         - datos_contacto con todos los campos en null
-        NO inventes datos. Si sí es un CV genuino, es_cv=true y motivo_no_cv=null.
+        NO inventes datos. Si sí es un CV genuino, es_cv=true.
         </DETECCIÓN_ARCHIVO_NO_CV>
 
         <DETECCIÓN_INJECTION_EN_CV>

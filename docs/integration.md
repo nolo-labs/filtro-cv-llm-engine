@@ -99,7 +99,11 @@ Ejemplo (`juan_perez.pdf.json`):
 ```json
 {
   "output_llm": {
+    "es_cv": true,
+    "intento_injection": false,
+    "razon_injection": null,
     "score_llm": 78,
+    "razon_score_llm": "Cumple los requisitos principales con experiencia relevante.",
     "datos_contacto": {
       "nombre": "Juan Pérez",
       "email": "juan@example.com",
@@ -109,26 +113,45 @@ Ejemplo (`juan_perez.pdf.json`):
       "edad": 32
     }
   },
-  "nombre_archivo_cv": "juan_perez.pdf",
-  "score_final": 78,
-  "model": "gemini/gemini-2.5-flash-lite",
-  "model_tier": "cheap",
-  "input_tokens": 1842,
-  "output_tokens": 312,
-  "cost_usd": 0.000128,
-  "latency_s": 2.41,
-  "processed_at": "2026-05-20T15:23:11.482Z"
+  "telemetry": {
+    "nombre_archivo_cv": "juan_perez.pdf",
+    "processed_at": "2026-05-20T15:23:11.482Z",
+    "model": "gemini/gemini-2.5-flash-lite",
+    "model_tier": "cheap",
+    "provider": "gemini",
+    "request_id": "...",
+    "finish_reason": "stop",
+    "input_tokens": 1842,
+    "cached_tokens": 1600,
+    "output_tokens": 312,
+    "total_tokens": 2154,
+    "remaining_requests": null,
+    "remaining_tokens": null,
+    "cost_usd": 0.000128,
+    "latency_s": 2.41
+  }
 }
 ```
 
 Campos relevantes para la UI:
-- `score_final` (0–100) → ranking de candidatos.
+- `output_llm.score_llm` (0–100) → ranking de candidatos.
 - `output_llm.datos_contacto` → datos extraídos del CV.
-- `nombre_archivo_cv` → para mapear de vuelta al archivo original.
-- `cost_usd`, `latency_s`, `model` → telemetría/auditoría.
+- `telemetry.nombre_archivo_cv` → para mapear de vuelta al archivo original.
+- `telemetry.cost_usd`, `telemetry.latency_s`, `telemetry.model` → auditoría.
 
 ### Error: `<storage>://$BUCKET/jobs/{job_id}/errors/{nombre_cv_original}.json`
 
+Hay dos formas según el tipo de fallo:
+
+**Fallo de negocio** (el LLM respondió, pero el archivo no es un CV o contiene injection):
+```json
+{
+  "error": "not_a_cv",
+  "telemetry": { "nombre_archivo_cv": "foto.jpg", "cost_usd": 0.000021, ... }
+}
+```
+
+**Fallo técnico** (excepción — el LLM puede no haber respondido):
 ```json
 {
   "cv_name": "cv_corrupto.pdf",

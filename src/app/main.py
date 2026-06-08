@@ -1,7 +1,6 @@
 """FastAPI: ingestor /jobs y status /jobs/{id}. El trabajo pesado lo hace un Cloud Run Job."""
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -14,7 +13,6 @@ from .config import (
     MODEL_TIERS,
     SUPPORTED_FORMATS,
 )
-from .pydantic_models import Weights
 
 load_dotenv()
 logging.basicConfig(
@@ -38,7 +36,6 @@ app = FastAPI(
 class JobRequest(BaseModel):
     job_id: str = Field(..., description="ID único del job (también prefijo en GCS)")
     job_description: str
-    weights: Optional[Weights] = None
     model_tier: str = Field(default=DEFAULT_MODEL_TIER)
 
 
@@ -77,13 +74,8 @@ async def create_job(req: JobRequest):
     if validation.es_injection:
         raise HTTPException(
             400,
-            f"JD rechazada por guardrail anti-injection: {validation.razon}",
+            f"JD rechazada por guardrail anti-injection: {validation.razon_injection}",
         )
-
-    weights_dict = (req.weights or Weights()).to_dict()
-    total_w = sum(weights_dict.values())
-    if abs(total_w - 1.0) > 0.01:
-        raise HTTPException(400, f"weights deben sumar 1.0, suman {total_w}")
 
     prefix = f"jobs/{req.job_id}"
     cv_names = [
@@ -101,7 +93,6 @@ async def create_job(req: JobRequest):
         {
             "job_id": req.job_id,
             "job_description": req.job_description,
-            "weights": weights_dict,
             "model_tier": req.model_tier,
             "total_cvs": len(cv_names),
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -137,7 +128,7 @@ async def get_job_status(job_id: str):
     for r in results:
         try:
             data = storage.read_json(storage.gs_uri(GCS_BUCKET, prefix, "results", r))
-            cost += float(data.get("cost_usd") or 0.0)
+            cost += float((data.get("telemetry") or {}).get("cost_usd") or 0.0)
         except Exception:
             logger.warning("No pude leer cost_usd de %s/%s", prefix, r)
 

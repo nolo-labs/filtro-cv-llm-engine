@@ -87,9 +87,11 @@ def main():
 
     results = download_results(BUCKET, f"jobs/{job_id}/results/")
     print(f"\n{len(results)} resultados:")
-    for r in sorted(results, key=lambda x: -x["score_final"]):
+    for r in sorted(results, key=lambda x: -x["output_llm"]["score_llm"]):
         c = r["output_llm"]["datos_contacto"]
-        print(f"  {r['score_final']:3d}  {c.get('nombre','?'):40s}  {r['nombre_archivo_cv']}")
+        nombre = c.get("nombre") or "?"
+        score = r["output_llm"]["score_llm"]
+        print(f"  {score:3d}  {nombre:40s}  {r['telemetry']['nombre_archivo_cv']}")
 
 
 if __name__ == "__main__":

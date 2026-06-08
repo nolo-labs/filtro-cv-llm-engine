@@ -54,6 +54,6 @@ def validate_job_description(job_description: str) -> tuple[JDValidation, LLMUsa
     validation, usage = call_llm(messages, JDValidation, model_tier=_GUARDRAIL_TIER)
     logger.info(
         "guardrail JD es_injection=%s cost=$%.6f model=%s razon=%s",
-        validation.es_injection, usage.cost_usd, usage.model, validation.razon,
+        validation.es_injection, usage.cost_usd, usage.model, validation.razon_injection,
     )
     return validation, usage
